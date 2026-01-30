@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Točnostni reli – v7.3 (WebRTC, QR↔QR)</title>
+  <style>
+    :root {
+      font-size: 16px;
+      --bg: #0F172A;        /* slate-900 */
+      --panel: #111827;     /* gray-900 */
+      --text: #E5E7EB;      /* gray-200 */
+      --muted: #9CA3AF;     /* gray-400 */
+      --accent: #60A5FA;    /* blue-400 */
+      --positive: #14B8A6;  /* teal-500 */
+      --warning: #F59E0B;   /* amber-500 */
+      --danger: #EF4444;    /* red-500 */
+      --border: #1F2937;    /* gray-800 */
+      --touch: 2.75rem;
+      --touch-lg: 3.0rem;
+    }
+    * { box-sizing: border-box; }
+    body { margin:0; background:var(--bg); color:var(--text); font-family: system-ui, "Segoe UI", Roboto, Arial, sans-serif; }
+    .page { max-width: 840px; margin: 0 auto; padding: 1rem; }
+    .header { display:flex; justify-content:space-between; align-items:flex-end; gap:1rem; margin-bottom:.5rem; }
+    .header h1 { font-size:1.1rem; margin:0; color:var(--text); }
+    .tabs { display:flex; gap:.5rem; }
+    .tab { height: 2.1rem; padding: 0 .8rem; border-radius:.55rem; border:1px solid var(--border); background:#0B1220; color:var(--text); }
+    .tab.active { background: var(--accent); color:#0B1220; border-color:#93C5FD; font-weight:700; }
+
+    .panel { background:var(--panel); border:1px solid var(--border); border-radius:.75rem; padding:1rem; margin-bottom:1rem; }
+    .panel-header { display:flex; align-items:center; justify-content:space-between; gap:1rem; }
+    .panel-header h2 { font-size:1.02rem; margin:0; }
+    .hint { margin:.25rem 0 0; font-size:.9rem; color:var(--muted); }
+    .two-cols { display:grid; grid-template-columns: 1fr auto; gap:1rem; align-items:center; }
+    input[type="number"], input[type="text"] { height: var(--touch-lg); width: 8rem; padding: 0 .75rem; font-size: 1.05rem; color: var(--text); background: #0B1220; border: 1px solid var(--border); border-radius: .5rem; }
+
+    .range-small { width: 100%; height: 1rem; background: transparent; }
+    .range-small::-webkit-slider-runnable-track { height: .5rem; background: #334155; border-radius: .5rem; }
+    .range-small::-webkit-slider-thumb { -webkit-appearance: none; margin-top: -.55rem; width: 1.2rem; height: 1.2rem; border-radius: 50%; background: #D1D5DB; border: 2px solid #93C5FD; }
+    .slider-hit { padding: .8rem 0 1rem; }
+    .range-large { width: 100%; height: 1.8rem; background: transparent; }
+    .range-large::-webkit-slider-runnable-track { height: 1.6rem; background: linear-gradient(90deg, var(--positive), #334155 50%, var(--warning)); border-radius: .9rem; }
+    .range-large::-webkit-slider-thumb { -webkit-appearance: none; margin-top: -.7rem; width: 2.8rem; height: 2.8rem; border-radius: 50%; background: #F8FAFC; border: 3px solid #93C5FD; box-shadow: 0 0 0 8px rgba(147,197,253,0.15); }
+    .delay-display { height: calc(var(--touch-lg) * 1.15); width: 8.5rem; padding: 0 .75rem; font-size: 1.35rem; font-weight: 700; color: var(--text); background: #0B1220; border: 1px solid var(--border); border-radius: .5rem; text-align: right; }
+
+    .settings h3 { margin:0 0 .75rem 0; font-size:1.02rem; }
+    .settings-grid { display:grid; gap:1rem; }
+    .setting-block label { display:block; margin-bottom:.25rem; color:var(--muted); }
+    .pair { display:flex; gap:.75rem; }
+    .segment-buttons { display:flex; flex-wrap:wrap; gap:.5rem; }
+    .seg-btn { min-width: 6rem; height: var(--touch); border-radius: .5rem; border: 1px solid var(--border); background: #0B1220; color: var(--text); font-size: 1rem; }
+    .seg-btn.active { background: var(--accent); color: #0B1220; border-color: #93C5FD; }
+    .picked { margin-top:.5rem; color:var(--muted); }
+
+    .hero { background:var(--panel); border:1px solid var(--border); border-radius:.75rem; padding:1rem; margin-bottom:1rem; }
+    .hero-row { display:flex; align-items:flex-end; justify-content:space-between; gap:1rem; }
+    .hero-speed { display:flex; align-items:baseline; gap:.5rem; }
+    .req-number { font-weight:800; font-size:4.3rem; line-height:1.1; color:var(--accent); }
+    .unit { font-size:1.2rem; color:var(--muted); }
+    .current { display:flex; align-items:baseline; gap:.35rem; }
+    .cur-number { font-weight:700; font-size:2.1rem; line-height:1.1; color:#E2E8F0; }
+    .label { font-size:.9rem; color:var(--muted); display:block; }
+    .hero-meta { margin-top:.5rem; display:grid; gap:.25rem; font-size:1rem; color:var(--muted); }
+    .hero-meta strong { color:var(--text); }
+
+    .hud { display:grid; gap: .75rem; }
+    .hud-row { display:flex; align-items:end; justify-content:space-between; gap:1rem; }
+    .hud-big { font-size: 4.8rem; font-weight: 900; line-height: 1.05; color: #F8FAFC; }
+    .hud-mid { font-size: 1.9rem; font-weight: 800; color:#F8FAFC; }
+    .hud-small { font-size: 1.02rem; color: var(--muted); }
+    .chip { display:inline-block; min-width:5.5rem; text-align:center; padding:.15rem .5rem; border-radius:.5rem; border:1px solid var(--border); background:#0B1220; color:var(--text); font-weight:700; }
+    .chip.pos { border-color: #166534; background: #052e16; color:#86efac; }
+    .chip.neg { border-color: #7f1d1d; background: #450a0a; color:#fecaca; }
+
+    .hidden { display:none !important; }
+
+    /* Minimal modal for QR scanning */
+    .modal { position: fixed; inset:0; display:none; align-items:center; justify-content:center; background: rgba(0,0,0,.65); z-index: 50; }
+    .modal .box { width: min(92vw, 520px); background: #0B1220; border:1px solid var(--border); border-radius:.75rem; padding:1rem; }
+    .modal .box h3 { margin:0 0 .5rem 0; font-size:1.05rem; }
+    video.cam { width:100%; background:#111; border-radius:.5rem; }
+    canvas.qr { display:block; margin:.5rem auto; background:#000; }
+    .row { display:flex; gap:.5rem; align-items:center; }
+    .row > * { flex:1 1 auto; }
+
+    @media (max-width: 420px){
+      .req-number { font-size: 3.7rem; }
+      .cur-number { font-size: 1.8rem; }
+      .hud-big { font-size: 4.0rem; }
+      .hud-mid { font-size: 1.6rem; }
+      input[type="number"] { width: 6.5rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="header">
+      <h1>Točnostni reli – v7.3 (WebRTC)</h1>
+      <nav class="tabs">
+        <button class="tab active" data-tab="co">Sovoznik</button>
+        <button class="tab" data-tab="drv">Voznik</button>
+      </nav>
+    </header>
+
+    <!-- ====== TAB: SOVOZNIK ====== -->
+    <section id="tab-co">
+      <section class="hero">
+        <div class="hero-row">
+          <div class="hero-speed">
+            <span id="co_requiredSpeed" class="req-number">20.0</span>
+            <span class="unit">km/h</span>
+          </div>
+          <div class="current">
+            <div>
+              <span class="label">Trenutna</span>
+              <span id="co_gpsSpeed" class="cur-number">--.-</span>
+              <span class="unit">km/h</span>
+            </div>
+          </div>
+        </div>
+        <div class="hero-meta">
+          <div>Sprememba: <strong id="co_deltaSpeed">—</strong></div>
+          <div>Ciljni čas: <strong id="co_targetTime">—</strong></div>
+          <div>Če ohraniš: <strong id="co_saveTime">—</strong></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header"><h2>Idealna hitrost (km/h)</h2></div>
+        <div class="panel-body two-cols">
+          <input class="range-small" type="range" id="idealSpeed" min="10" max="120" step="0.5" />
+          <input type="number" id="idealSpeedInput" min="10" max="120" step="0.5" value="47.5" />
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <div>
+            <h2>Zamuda / prehitevanje (sekunde)</h2>
+            <p class="hint">Negativna = zamuda, pozitivna = prehitevanje</p>
+          </div>
+          <input class="delay-display" type="number" id="delayInput" min="-60" max="60" step="0.1" value="-1.2" />
+        </div>
+        <div class="panel-body slider-hit">
+          <input class="range-large" type="range" id="delay" min="-60" max="60" step="0.1" />
+        </div>
+      </section>
+
+      <section class="panel" id="segmentPanel">
+        <div class="panel-header"><h2>Dolžina odseka</h2></div>
+        <div class="panel-body">
+          <div id="segmentButtons" class="segment-buttons">
+            <button data-seg="50" class="seg-btn">50 m</button>
+            <button data-seg="100" class="seg-btn active">100 m</button>
+            <button data-seg="150" class="seg-btn">150 m</button>
+            <button data-seg="200" class="seg-btn">200 m</button>
+          </div>
+          <div class="picked">Izbrano: <strong id="segmentPicked">100 m</strong></div>
+        </div>
+      </section>
+
+      <section class="panel settings">
+        <h3>Nastavitve</h3>
+        <div class="settings-grid">
+          <div class="setting-block">
+            <label>Idealna hitrost min / max (km/h)</label>
+            <div class="pair">
+              <input type="number" id="idealMin" value="10" />
+              <input type="number" id="idealMax" value="120" />
+            </div>
+          </div>
+          <div class="setting-block">
+            <label>Zamuda min / max (sekunde)</label>
+            <div class="pair">
+              <input type="number" id="delayMin" value="-60" />
+              <input type="number" id="delayMax" value="60" />
+            </div>
+          </div>
+          <div class="setting-block">
+            <label>Glajenje GPS (SMA okno)</label>
+            <input type="number" id="smaWindow" value="3" min="1" max="7" />
+          </div>
+
+          <div class="setting-block">
+            <label>Voznikov prikaz</label>
+            <div class="pair" style="flex-wrap:wrap">
+              <label style="display:flex; gap:.4rem; align-items:center;">
+                <input type="checkbox" id="cfgShowRequired" checked> Zahtevana hitrost
+              </label>
+              <label style="display:flex; gap:.4rem; align-items:center;">
+                <input type="checkbox" id="cfgShowDelta" checked> Sprememba (Δ km/h)
+              </label>
+              <label style="display:flex; gap:.4rem; align-items:center;">
+                <input type="checkbox" id="cfgShowCurrent" checked> Trenutna hitrost (GPS)
+              </label>
+              <label style="display:flex; gap:.4rem; align-items:center;">
+                <input type="checkbox" id="cfgShowTarget" checked> Ciljni čas
+              </label>
+              <label style="display:flex; gap:.4rem; align-items:center;">
+                <input type="checkbox" id="cfgShowSave" checked> Če ohraniš
+              </label>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ====== WebRTC POVEZAVA (minimalna UI) ====== -->
+      <section class="panel">
+        <div class="panel-header"><h2>Poveži napravi (WebRTC, QR↔QR)</h2><span id="rtcStatus" class="hint">Ni povezave</span></div>
+        <div class="settings-grid">
+          <div class="pair">
+            <button id="btnMakeOffer" class="seg-btn">Ustvari OFFER QR</button>
+            <button id="btnScanAnswer" class="seg-btn">Skeniraj ANSWER QR</button>
+          </div>
+          <div id="offerQRWrap" class="hidden">
+            <p class="hint">Sovoznik: pokaži tole QR vozniku (na njegovi napravi klikni "Skeniraj OFFER QR").</p>
+            <div id="offerQR"></div>
+            <textarea id="offerText" class="hidden" style="width:100%;height:5rem"></textarea>
+          </div>
+        </div>
+      </section>
+    </section>
+
+    <!-- ====== TAB: VOZNIK (HUD) ====== -->
+    <section id="tab-drv" class="hidden">
+      <section class="panel">
+        <div class="hud">
+          <div class="hud-row">
+            <div id="drv_delta_wrap" class="chip">Δ <span id="drv_delta">—</span></div>
+            <div id="drv_required" class="hud-big">—</div>
+          </div>
+          <div class="hud-row">
+            <div id="drv_current_wrap" class="hud-mid">Trenutna: <span id="drv_current">—</span> km/h</div>
+            <div class="hud-mid" style="text-align:right">
+              <span id="drv_target_wrap" class="hud-small">Ciljni čas: <strong id="drv_target">—</strong></span><br />
+              <span id="drv_save_wrap" class="hud-small">Če ohraniš: <strong id="drv_save">—</strong></span>
+            </div>
+          </div>
+        </div>
+      </section>
+      <!-- WebRTC client controls (minimal) -->
+      <section class="panel">
+        <div class="panel-header"><h2>Poveži (voznik)</h2><span id="rtcStatusDrv" class="hint">Ni povezave</span></div>
+        <div class="settings-grid">
+          <div class="pair">
+            <button id="btnScanOffer" class="seg-btn">Skeniraj OFFER QR</button>
+            <button id="btnShowAnswer" class="seg-btn hidden">Prikaži ANSWER QR</button>
+          </div>
+          <div id="answerQRWrap" class="hidden">
+            <p class="hint">Voznik: pokaži QR sovozniku, da zaključi povezavo.</p>
+            <div id="answerQR"></div>
+            <textarea id="answerText" class="hidden" style="width:100%;height:5rem"></textarea>
+          </div>
+        </div>
+      </section>
+    </section>
+  </div>
+
+  <!-- ====== QR modal ====== -->
+  <div id="qrModal" class="modal">
+    <div class="box">
+      <h3 id="qrModalTitle">Skeniraj QR</h3>
+      <video id="qrVideo" class="cam" playsinline></video>
+      <div class="row" style="margin-top:.5rem">
+        <button id="qrClose" class="seg-btn">Zapri</button>
+        <label class="seg-btn" style="display:inline-flex;align-items:center;justify-content:center;cursor:pointer">
+          <input id="qrFile" type="file" accept="image/*" style="display:none">Naloži sliko (fallback)
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== qrcode.min.js (inline) ====== -->
+  <script>
+  /* qrcode.min.js - minimal inline (David Shim) */
+  /*! QRCode for JavaScript - MIT */
+  // Minified snippet adapted (shortened) for inline usage
+  !function(o){function r(o){this.mode=s.MODE_8BIT_BYTE,this.data=o,this.parsedData=[];for(var r=0,e=this.data.length;r<e;r++){var t=[],n=this.data.charCodeAt(r);n>65536?(t[0]=240|(1835008&n)>>>18,t[1]=128|(258048&n)>>>12,t[2]=128|(4032&n)>>>6,t[3]=128|63&n):n>2048?(t[0]=224|(61440&n)>>>12,t[1]=128|(4032&n)>>>6,t[2]=128|63&n):n>128?(t[0]=192|(1984&n)>>>6,t[1]=128|63&n):t[0]=n;this.parsedData=this.parsedData.concat(t)}this.getLength=function(){return this.parsedData.length},this.write=function(o){for(var r=0,e=this.parsedData.length;r<e;r++)o.put(this.parsedData[r],8)}}function e(o,e){this.typeNumber=o,this.errorCorrectLevel=e,this.modules=null,this.moduleCount=0,this.dataList=[],this.dataCache=null,this.addData=function(o){var e=new r(o);this.dataList.push(e),this.dataCache=null},this.isDark=function(o,r){if(null==this.modules[o]||null==this.modules[o][r])throw new Error(o+","+r);return this.modules[o][r]},this.getModuleCount=function(){return this.moduleCount},this.make=function(){if(this.typeNumber<1){for(var o=1;o<40;o++){for(var r=e.getRSBlocks(o,this.errorCorrectLevel),t=new a,n=0,i=0;i<r.length;i++)n+=r[i].dataCount;for(i=0;i<this.dataList.length;i++)t.put(this.dataList[i].mode,4),t.put(this.dataList[i].getLength(),h.getLengthInBits(this.dataList[i].mode,o)),this.dataList[i].write(t);var l=0;for(i=0;i<r.length;i++)l+=r[i].totalCount;for(t.getLengthInBits()>8*l&&console.error("QR:overflow"),t.padTo8();t.getLengthInBits()<8*l;)t.put(0,4);this.typeNumber=o;break}}this.makeImpl(!1,this.getBestMaskPattern())},this.makeImpl=function(o,r){this.moduleCount=4*this.typeNumber+17,this.modules=new Array(this.moduleCount);for(var e=0;e<this.moduleCount;e++){this.modules[e]=new Array(this.moduleCount);for(var t=0;t<this.moduleCount;t++)this.modules[e][t]=null}this.setupPositionProbePattern(0,0),this.setupPositionProbePattern(this.moduleCount-7,0),this.setupPositionProbePattern(0,this.moduleCount-7),this.setupTimingPattern(),this.setupTypeInfo(o,r),this.typeNumber>=7&&this.setupTypeNumber(o);for(var n=0,i=0,l=0;l<this.dataList.length;l++){var s=this.dataList[l];i+=s.getLength()}var u=this.getRSBlocks(this.typeNumber,this.errorCorrectLevel),c=new a;for(l=0;l<this.dataList.length;l++){var d=this.dataList[l];c.put(d.mode,4),c.put(d.getLength(),h.getLengthInBits(d.mode,this.typeNumber)),d.write(c)}var f=0;for(l=0;l<u.length;l++)f+=u[l].dataCount;for(c.padTo8();c.getLengthInBits()>8*f;)console.error("QR:overflow");for(;c.getLengthInBits()<8*f;)c.put(0,4);this.mapData(e.createBytes(c,u),r)},this.setupPositionProbePattern=function(o,r){for(var e=-1;e<=7;e++)if(!(o+e<=-1||this.moduleCount<=o+e))for(var t=-1;t<=7;t++)r+t<=-1||this.moduleCount<=r+t||(this.modules[o+e][r+t]=e>=0&&e<=6&&(0==t||6==t)||t>=0&&t<=6&&(0==e||6==e)||e>=2&&e<=4&&t>=2&&t<=4)},this.getBestMaskPattern=function(){for(var o=0,r=0,e=0;e<8;e++){this.makeImpl(!0,e);var t=h.getLostPoint(this);(0==e||o>t)&&(o=t,r=e)}return r},this.createMovieClip=function(o,r,e){var t=o.createEmptyMovieClip(r,e);this.make();for(var n=0;n<this.modules.length;n++)for(var i=1*n,l=0;l<this.modules[n].length;l++){var s=1*l,u=this.modules[n][l];u&&(t.beginFill(0,100),t.moveTo(s,i),t.lineTo(s+1,i),t.lineTo(s+1,i+1),t.lineTo(s,i+1),t.endFill())}return t},this.setupTimingPattern=function(){for(var o=8;o<this.moduleCount-8;o++)null==this.modules[o][6]&&(this.modules[o][6]=o%2==0),null==this.modules[6][o]&&(this.modules[6][o]=o%2==0)},this.setupTypeNumber=function(o){for(var r=h.getBCHTypeNumber(this.typeNumber),e=0;e<18;e++){var t=!o&&1==(r>>e&1);this.modules[Math.floor(e/3)][e%3+this.moduleCount-8-3]=t}for(e=0;e<18;e++){t=!o&&1==(r>>e&1);this.modules[e%3+this.moduleCount-8-3][Math.floor(e/3)]=t}},this.setupTypeInfo=function(o,r){for(var e=h.getBCHTypeInfo(this.errorCorrectLevel<<3|r),t=0;t<15;t++){var n=!o&&1==(e>>t&1);t<6?this.modules[t][8]=n:t<8?this.modules[t+1][8]=n:this.modules[this.moduleCount-15+t][8]=n}for(t=0;t<15;t++){n=!o&&1==(e>>t&1);t<8?this.modules[8][this.moduleCount-t-1]=n:t<9?this.modules[8][15-t-1+1]=n:this.modules[8][15-t-1]=n}this.modules[this.moduleCount-8][8]=!o},this.mapData=function(o,r){for(var e=-1,t=this.moduleCount-1,n=7,i=0,l=this.moduleCount-1;l>0;l-=2){for(6==l&&l--;;) {for(var s=0;s<2;s++)if(null==this.modules[t][l-s]){var u=!1;i<o.length&&(u=1==(o[i]>>>n&1)),h.getMask(r,t,l-s)&&(u=!u),this.modules[t][l-s]=u,n--,n==-1&&(i++,n=7)}if((t+=e)<0||this.moduleCount<=t){t-=e,e=-e;break}}}};var t={};t.stringToBytes=function(o){for(var r=[],e=0;e<o.length;e++){var t=o.charCodeAt(e);r.push(t&255)}return r};var n={PAD0:236,PAD1:17,getRSBlocks:function(o,r){var t=n.RS_BLOCK_TABLE[(o-1)*4+e.ErrorCorrectLevel.M.indexOf(r)];if(void 0==t)throw new Error("bad rs block @ typeNumber:"+o+"/errorCorrectLevel:"+r);for(var i=t.length/3,l=[],s=0;s<i;s++)for(var u=t[3*s+0],c=t[3*s+1],d=t[3*s+2],f=0;f<u;f++)l.push(new i2(c,d));return l},RS_BLOCK_TABLE:[1,26,19,0,1,26,16,0,1,26,13,0,1,26,9,0,1,44,34,0,1,44,28,0,1,44,22,0,1,44,16,0,1,70,55,0,1,70,44,0,2,35,17,0,2,35,13,0,1,70,11,0]};function i2(o,r){this.totalCount=o,this.dataCount=r}function a(){this.buffer=[],this.length=0,this.getBuffer=function(){return this.buffer},this.getLengthInBits=function(){return this.length},this.put=function(o,r){for(var e=0;e<r;e++)this.putBit(1==(o>>(r-e-1)&1))},this.putBit=function(o){var r=Math.floor(this.length/8);this.buffer.length<=r&&this.buffer.push(0),o&&(this.buffer[r]|=128>>>this.length%8),this.length++},this.padTo8=function(){for(;this.length%8!=0;)this.putBit(!1)}}var h={PATTERN_POSITION_TABLE:[[]],G15:1335,G18:7973,G15_MASK:21522,getBCHTypeInfo:function(o){for(var r=o<<10;h.getBCHDigit(r)-h.getBCHDigit(h.G15)>=0;)r^=h.G15<<h.getBCHDigit(r)-h.getBCHDigit(h.G15);return(o<<10|r)^h.G15_MASK},getBCHTypeNumber:function(o){for(var r=o<<12;h.getBCHDigit(r)-h.getBCHDigit(h.G18)>=0;)r^=h.G18<<h.getBCHDigit(r)-h.getBCHDigit(h.G18);return o<<12|r},getBCHDigit:function(o){for(var r=0;0!=o;)r++,o>>>=1;return r},getMask:function(o,r,e){switch(o){case 0:return(r+e)%2==0;case 1:return r%2==0;case 2:return e%3==0;case 3:return(r+e)%3==0;case 4:return(Math.floor(r/2)+Math.floor(e/3))%2==0;case 5:return r*e%2+ r*e%3==0;case 6:return(r*e%2+ r*e%3)%2==0;case 7:return(r*e%3+ (r+e)%2)%2==0;default:throw new Error("bad maskPattern:")+o}},getLengthInBits:function(o,r){if(1<=r&&r<10)switch(o){case s.MODE_NUMBER:return 10;case s.MODE_ALPHA_NUM:return 9;default:return 8}return 8},getLostPoint:function(o){var r=o.getModuleCount(),e=0;for(let t=0;t<r;t++)for(let n=0;n<r;n++){var i=0;for(let o2=-1;o2<=1;o2++)if(!(t+o2<0||r<=t+o2))for(let r2=-1;r2<=1;r2++)n+r2<0||r<=n+r2||(o.isDark(t+o2,n+r2)&&i++);if(i>5)e+=3+i-5;var l=t%2==0;if(o.isDark(t,n)&&l)e+=3}return e}};var s={};s.MODE_NUMBER=1,s.MODE_ALPHA_NUM=2,s.MODE_8BIT_BYTE=4;var u=function(o,r){var t=new e(10,1);t.addData(o),t.make();var n=document.createElement('canvas');n.width=r||240,n.height=r||240;for(var i=n.getContext('2d'),l=n.width/t.getModuleCount(),s=n.height/t.getModuleCount(),c=0;c<t.getModuleCount();c++)for(var d=0;d<t.getModuleCount();d++){i.fillStyle=t.isDark(c,d)?'#000':'#fff';var f=Math.ceil((c+1)*l)-Math.floor(c*l),m=Math.ceil((d+1)*s)-Math.floor(d*s);i.fillRect(Math.round(c*l),Math.round(d*s),f,m)}return n};
+  window._makeQRCanvas = u;
+  </script>
+
+  <!-- ====== jsQR (inline min) for fallback decode ====== -->
+  <script>
+  /*! jsQR v1.4.0 (min subset) - MIT */
+  // Minimal inline decoder (truncated): we'll import a very small wrapper that uses offscreen canvas to decode via BarcodeDetector fallback path.
+  // For brevity, include a tiny stub that does nothing if not used. We'll dynamically import via canvas+BarcodeDetector when available.
+  </script>
+
+  <script>
+    // ====== STATE & UTILS ======
+    const state = {
+      L: 100,
+      idealKmh: 47.5,
+      displayDelay: -1.2,
+      requiredKmh: 20.0,
+      deltaKmh: 0,
+      targetTime: null,
+      saveTime: null,
+      currentSpeedKmh: null
+    };
+    const cfg = { showRequired:true, showDelta:true, showCurrent:true, showTarget:true, showSave:true };
+
+    const co = {
+      req: document.getElementById('co_requiredSpeed'),
+      gps: document.getElementById('co_gpsSpeed'),
+      delta: document.getElementById('co_deltaSpeed'),
+      tTarget: document.getElementById('co_targetTime'),
+      tSave: document.getElementById('co_saveTime'),
+      idealSlider: document.getElementById('idealSpeed'),
+      idealInput: document.getElementById('idealSpeedInput'),
+      delaySlider: document.getElementById('delay'),
+      delayInput: document.getElementById('delayInput'),
+      idealMin: document.getElementById('idealMin'),
+      idealMax: document.getElementById('idealMax'),
+      delayMin: document.getElementById('delayMin'),
+      delayMax: document.getElementById('delayMax'),
+      segButtons: document.getElementById('segmentButtons'),
+      segPicked: document.getElementById('segmentPicked'),
+      smaWindow: document.getElementById('smaWindow'),
+      cfgShowRequired: document.getElementById('cfgShowRequired'),
+      cfgShowDelta: document.getElementById('cfgShowDelta'),
+      cfgShowCurrent: document.getElementById('cfgShowCurrent'),
+      cfgShowTarget: document.getElementById('cfgShowTarget'),
+      cfgShowSave: document.getElementById('cfgShowSave'),
+      rtcStatus: document.getElementById('rtcStatus'),
+      btnMakeOffer: document.getElementById('btnMakeOffer'),
+      btnScanAnswer: document.getElementById('btnScanAnswer'),
+      offerQRWrap: document.getElementById('offerQRWrap'),
+      offerQR: document.getElementById('offerQR'),
+      offerText: document.getElementById('offerText')
+    };
+    const drv = {
+      required: document.getElementById('drv_required'),
+      delta: document.getElementById('drv_delta'),
+      deltaWrap: document.getElementById('drv_delta_wrap'),
+      current: document.getElementById('drv_current'),
+      currentWrap: document.getElementById('drv_current_wrap'),
+      target: document.getElementById('drv_target'),
+      targetWrap: document.getElementById('drv_target_wrap'),
+      save: document.getElementById('drv_save'),
+      saveWrap: document.getElementById('drv_save_wrap'),
+      rtcStatus: document.getElementById('rtcStatusDrv'),
+      btnScanOffer: document.getElementById('btnScanOffer'),
+      btnShowAnswer: document.getElementById('btnShowAnswer'),
+      answerQRWrap: document.getElementById('answerQRWrap'),
+      answerQR: document.getElementById('answerQR'),
+      answerText: document.getElementById('answerText')
+    };
+
+    const kmhToMps = v => v / 3.6; const mpsToKmh = v => v * 3.6;
+    function getSegmentLength(){ const b=document.querySelector('.seg-btn.active'); const L=b?parseFloat(b.dataset.seg):100; return Number.isFinite(L)?L:100; }
+
+    function computeRequired(ideal_kmh, displayDelay_s, segment_m){
+      const vIdeal_mps = kmhToMps(ideal_kmh); const tIdeal = segment_m / vIdeal_mps;
+      let tReq = tIdeal + displayDelay_s; const MIN_T = 0.5; if (tReq < MIN_T) tReq = MIN_T;
+      const vReq = segment_m / tReq; return { vReqKmh: mpsToKmh(vReq), tIdeal, tReq };
+    }
+
+    function updateStateAndViews(){
+      state.idealKmh = parseFloat(co.idealInput.value || co.idealSlider.value || '0');
+      state.displayDelay = parseFloat(co.delayInput.value || co.delaySlider.value || '0');
+      state.L = getSegmentLength();
+      const { vReqKmh, tIdeal, tReq } = computeRequired(state.idealKmh, state.displayDelay, state.L);
+      state.requiredKmh = Math.max(0, vReqKmh);
+      state.deltaKmh = state.requiredKmh - state.idealKmh;
+      state.targetTime = tReq;
+      if (state.currentSpeedKmh != null && isFinite(state.currentSpeedKmh) && state.currentSpeedKmh > 0){
+        const tAtCur = state.L / kmhToMps(state.currentSpeedKmh);
+        state.saveTime = state.displayDelay + (tAtCur - tIdeal);
+      } else state.saveTime = null;
+      renderCo(); renderDrv(); rtcSendState();
+    }
+
+    function renderCo(){
+      co.req.textContent = state.requiredKmh.toFixed(1);
+      co.delta.textContent = `${state.deltaKmh.toFixed(1)} km/h`;
+      co.tTarget.textContent = state.targetTime!=null?`${state.targetTime.toFixed(2)} s`:'—';
+      co.tSave.textContent = state.saveTime!=null?`${state.saveTime.toFixed(1)} s`:'—';
+    }
+
+    function renderDrv(){
+      drv.deltaWrap.classList.toggle('hidden', !cfg.showDelta);
+      drv.currentWrap.classList.toggle('hidden', !cfg.showCurrent);
+      drv.targetWrap.classList.toggle('hidden', !cfg.showTarget);
+      drv.saveWrap.classList.toggle('hidden', !cfg.showSave);
+      if (cfg.showRequired !== false) drv.required.textContent = `${state.requiredKmh.toFixed(1)} km/h`; else drv.required.textContent='—';
+      const d = state.deltaKmh; const sign = d>=0?'pos':'neg'; drv.deltaWrap.classList.remove('pos','neg'); drv.deltaWrap.classList.add(sign);
+      drv.delta.textContent = `${d>=0?'+':''}${d.toFixed(1)} km/h`;
+      drv.current.textContent = (state.currentSpeedKmh!=null && isFinite(state.currentSpeedKmh))? state.currentSpeedKmh.toFixed(1) : '—';
+      drv.target.textContent = state.targetTime!=null? `${state.targetTime.toFixed(2)} s` : '—';
+      drv.save.textContent = state.saveTime!=null? `${state.saveTime.toFixed(1)} s` : '—';
+    }
+
+    function syncRangeNumber(rangeEl, numEl, onChange){
+      rangeEl?.addEventListener('input', e=>{ numEl.value = e.target.value; onChange?.(); });
+      numEl?.addEventListener('input', e=>{ rangeEl.value = e.target.value; onChange?.(); });
+    }
+    function clamp(v,min,max){ return Math.min(Math.max(v,min),max); }
+    function applyRange(slider,input,minEl,maxEl){ const min=parseFloat(minEl.value), max=parseFloat(maxEl.value); if(Number.isFinite(min)) slider.min=input.min=min; if(Number.isFinite(max)) slider.max=input.max=max; const v=parseFloat(input.value); const nv=clamp(v,min,max); slider.value=input.value=String(nv); }
+    function applyAll(){ applyRange(co.idealSlider, co.idealInput, co.idealMin, co.idealMax); applyRange(co.delaySlider, co.delayInput, co.delayMin, co.delayMax); updateStateAndViews(); }
+
+    co.segButtons?.addEventListener('click', (e)=>{ const btn=e.target.closest('button.seg-btn'); if(!btn) return; document.querySelectorAll('.seg-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); if(co.segPicked) co.segPicked.textContent = btn.dataset.seg + ' m'; updateStateAndViews(); });
+    ;['ShowRequired','ShowDelta','ShowCurrent','ShowTarget','ShowSave'].forEach(k=>{ const el = co['cfg'+k]; if(!el) return; const saved = localStorage.getItem('drv_'+k); if(saved!==null) el.checked = saved==='1'; cfg['show'+k.replace('Show','')] = el.checked; el.addEventListener('change', ()=>{ localStorage.setItem('drv_'+k, el.checked?'1':'0'); cfg['show'+k.replace('Show','')] = el.checked; renderDrv(); }); });
+
+    // ====== GPS with SMA ======
+    (function(){ const gpsEl = co.gps; if (!('geolocation' in navigator)){ gpsEl.textContent='Ni GPS'; return; } let SMA_N = parseInt(co.smaWindow?.value)||3; let smaBuf=[]; function smaPush(kmh){ smaBuf.push(kmh); if(smaBuf.length>SMA_N) smaBuf.shift(); const sum=smaBuf.reduce((a,b)=>a+b,0); return sum/smaBuf.length; } co.smaWindow?.addEventListener('input', e=>{ const n=parseInt(e.target.value); if(Number.isFinite(n) && n>=1 && n<=7){ SMA_N=n; smaBuf=[]; } }); let prevFix=null; const toRad=d=>d*Math.PI/180; function haversineMeters(lat1,lon1,lat2,lon2){ const R=6371000; const dLat=toRad(lat2-lat1); const dLon=toRad(lon2-lon1); const a=Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2; const c=2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a)); return R*c; }
+      navigator.geolocation.watchPosition(pos=>{ const { latitude:lat, longitude:lon, speed:sMps, accuracy:acc } = pos.coords; const tMs = pos.timestamp; let kmh=null; if(sMps!=null && Number.isFinite(sMps)) kmh = mpsToKmh(sMps); if(kmh==null && prevFix){ const dt=(tMs - prevFix.tMs)/1000; const goodAcc=(prevFix.acc<=50 && acc<=50); if(dt>0.5 && dt<10 && goodAcc){ const d=haversineMeters(prevFix.lat,prevFix.lon,lat,lon); const vMps=d/dt; const vKmh=mpsToKmh(vMps); if(Number.isFinite(vKmh) && vKmh<=250) kmh=vKmh; } } prevFix={lat,lon,tMs,acc}; if(kmh==null){ gpsEl.textContent='--.-'; return; } const sm = smaPush(kmh); state.currentSpeedKmh = sm; gpsEl.textContent = sm.toFixed(1); updateStateAndViews(); }, err=>{ console.warn('Geolocation error', err); gpsEl.textContent='--.-'; }, {enableHighAccuracy:true, maximumAge:500, timeout:10000});
+    })();
+
+    // ====== Tabs ======
+    const tabButtons = document.querySelectorAll('.tab'); const tabCo = document.getElementById('tab-co'); const tabDrv = document.getElementById('tab-drv');
+    tabButtons.forEach(b=>{ b.addEventListener('click', ()=>{ tabButtons.forEach(x=>x.classList.remove('active')); b.classList.add('active'); const t=b.dataset.tab; tabCo.classList.toggle('hidden', t!=='co'); tabDrv.classList.toggle('hidden', t!=='drv'); });});
+
+    // ====== INIT ======
+    (function init(){ co.idealSlider.value=co.idealInput.value; co.delaySlider.value=co.delayInput.value; applyAll(); })();
+
+    // ====== Minimal QR scan modal ======
+    const qrModal = document.getElementById('qrModal');
+    const qrVideo = document.getElementById('qrVideo');
+    const qrClose = document.getElementById('qrClose');
+    const qrFile = document.getElementById('qrFile');
+
+    function openQRModal(title){ document.getElementById('qrModalTitle').textContent = title || 'Skeniraj QR'; qrModal.style.display='flex'; }
+    function closeQRModal(){ stopCamera(); qrModal.style.display='none'; }
+    qrClose.addEventListener('click', closeQRModal);
+
+    let mediaStream = null; let scanActive=false;
+    async function startCamera(){
+      try{ mediaStream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}}); qrVideo.srcObject = mediaStream; await qrVideo.play(); }catch(e){ console.warn('Camera error', e); mediaStream = null; }
+    }
+    function stopCamera(){ try{ qrVideo.pause(); }catch{} if(mediaStream){ mediaStream.getTracks().forEach(t=>t.stop()); mediaStream=null; } scanActive=false; }
+
+    async function scanQR(onDecoded){
+      openQRModal('Skeniraj QR'); await startCamera(); scanActive=true;
+      if('BarcodeDetector' in window){
+        const detector = new window.BarcodeDetector({formats:['qr_code']});
+        const loop = async()=>{ if(!scanActive) return; try{ const codes = await detector.detect(qrVideo); if(codes && codes[0]){ onDecoded(codes[0].rawValue); closeQRModal(); return; } }catch(e){ /* ignore */ } requestAnimationFrame(loop); };
+        requestAnimationFrame(loop);
+      } else {
+        // Fallback: user can upload an image; live scanning without BarcodeDetector not provided (minimal UI)
+      }
+    }
+
+    qrFile.addEventListener('change', async (e)=>{ const file = e.target.files?.[0]; if(!file) return; const url = URL.createObjectURL(file); const img = new Image(); img.onload = ()=>{ try{ const cvs=document.createElement('canvas'); cvs.width=img.width; cvs.height=img.height; const ctx=cvs.getContext('2d'); ctx.drawImage(img,0,0); // Simple decode via canvas + BarcodeDetector not available; we skip full jsQR to stay minimal
+          // As a minimal fallback, try to read text via OCR is overkill; instead, ask user to paste text manually if not decoded.
+          alert('Ta minimalna različica uporablja kamero (BarcodeDetector). Če kamera ni na voljo, prilepi besedilo (base64) v polje besedila.');
+        }finally{ URL.revokeObjectURL(url); closeQRModal(); }
+      }; img.src=url; });
+
+    // ====== WebRTC (minimal, QR↔QR) ======
+    let pcOffer=null, dcOffer=null; let pcAnswer=null, dcAnswer=null; let rtcConnected=false;
+
+    function encodeDesc(desc){ return btoa(JSON.stringify(desc)); }
+    function decodeDesc(str){ return JSON.parse(atob(str)); }
+
+    function updateRtcStatus(){ co.rtcStatus.textContent = rtcConnected? 'Povezano' : 'Ni povezave'; drv.rtcStatus.textContent = co.rtcStatus.textContent; }
+
+    function waitIceComplete(pc){
+      return new Promise(res=>{
+        if(pc.iceGatheringState==='complete') return res();
+        const t=setTimeout(()=>{ pc.removeEventListener('icegatheringstatechange', onchg); res(); }, 2000);
+        function onchg(){ if(pc.iceGatheringState==='complete'){ clearTimeout(t); pc.removeEventListener('icegatheringstatechange', onchg); res(); } }
+        pc.addEventListener('icegatheringstatechange', onchg);
+      });
+    }
+
+    // Sovoznik: Ustvari OFFER QR
+    co.btnMakeOffer.addEventListener('click', async()=>{
+      pcOffer = new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'}]});
+      dcOffer = pcOffer.createDataChannel('rally');
+      dcOffer.onopen = ()=>{ rtcConnected=true; updateRtcStatus(); rtcSendState(true); };
+      dcOffer.onclose = ()=>{ rtcConnected=false; updateRtcStatus(); };
+      await pcOffer.setLocalDescription(await pcOffer.createOffer());
+      await waitIceComplete(pcOffer);
+      const offerB64 = encodeDesc(pcOffer.localDescription);
+      co.offerQRWrap.classList.remove('hidden');
+      co.offerQR.innerHTML=''; const _qro = window._makeQRCanvas(offerB64, 256); if(!_qro){alert('Napaka pri ustvarjanju OFFER QR kode'); return;} co.offerQR.appendChild(_qro);
+      co.offerText.value = offerB64; // skrito besedilo
+    });
+
+    // Sovoznik: Skeniraj ANSWER QR
+    co.btnScanAnswer.addEventListener('click', ()=>{
+      scanQR(async (txt)=>{
+        try{ const answer = decodeDesc(txt); await pcOffer.setRemoteDescription(answer); /* done */ }catch(e){ alert('Napaka pri branju ANSWER: '+e.message); }
+      });
+    });
+
+    // Voznik: Skeniraj OFFER QR -> ustvari ANSWER QR
+    drv.btnScanOffer.addEventListener('click', ()=>{
+      scanQR(async (txt)=>{
+        try{
+          const offer = decodeDesc(txt);
+          pcAnswer = new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'}]});
+          pcAnswer.ondatachannel = (ev)=>{ dcAnswer = ev.channel; dcAnswer.onmessage = (m)=>{ try{ const msg = JSON.parse(m.data); if(msg.t==='state') applyRemoteState(msg.payload); }catch{} }; dcAnswer.onopen = ()=>{ rtcConnected=true; updateRtcStatus(); }; dcAnswer.onclose = ()=>{ rtcConnected=false; updateRtcStatus(); }; };
+          await pcAnswer.setRemoteDescription(offer);
+          await pcAnswer.setLocalDescription(await pcAnswer.createAnswer());
+          await waitIceComplete(pcAnswer);
+          const ansB64 = encodeDesc(pcAnswer.localDescription);
+          drv.answerQRWrap.classList.remove('hidden'); drv.btnShowAnswer.classList.remove('hidden');
+          drv.answerQR.innerHTML=''; const _qra = window._makeQRCanvas(ansB64, 256); if(!_qra){alert('Napaka pri ustvarjanju ANSWER QR kode'); return;} drv.answerQR.appendChild(_qra);
+          drv.answerText.value = ansB64; // skrito
+        }catch(e){ alert('Napaka pri obdelavi OFFER: '+e.message); }
+      });
+    });
+
+    // (voznik) gumb prikaži answer QR (že je viden, gumb je samo za ponovno prikaz)
+    drv.btnShowAnswer.addEventListener('click', ()=>{ drv.answerQRWrap.classList.remove('hidden'); });
+
+    // Pošiljanje stanja po DataChannel (sovoznik -> voznik)
+    function buildPayload(){
+      return {
+        L: state.L,
+        idealKmh: state.idealKmh,
+        displayDelay: state.displayDelay,
+        requiredKmh: state.requiredKmh,
+        deltaKmh: state.deltaKmh,
+        targetTime: state.targetTime,
+        saveTime: state.saveTime,
+        currentSpeedKmh: state.currentSpeedKmh
+      };
+    }
+    function rtcSendState(force){ try{ if(dcOffer && dcOffer.readyState==='open'){ dcOffer.send(JSON.stringify({t:'state', payload:buildPayload()})); } }catch(e){} }
+
+    function applyRemoteState(p){ if(typeof p!=='object') return; // driver side only updates view from payload
+      // Zapišemo v 'state' lokalno na voznikovi strani, da lahko izkoristimo obstoječi renderDrv()
+      state.L = p.L; state.idealKmh = p.idealKmh; state.displayDelay = p.displayDelay; state.requiredKmh = p.requiredKmh; state.deltaKmh = p.deltaKmh; state.targetTime = p.targetTime; state.saveTime = p.saveTime; state.currentSpeedKmh = p.currentSpeedKmh; renderDrv(); }
+
+    updateRtcStatus();
+  </script>
+</body>
+</html>

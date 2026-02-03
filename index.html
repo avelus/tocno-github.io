@@ -1,0 +1,24 @@
+
+<!DOCTYPE html>
+<html lang='sl'>
+<head>
+<meta charset='UTF-8'>
+<meta name='viewport' content='width=device-width, initial-scale=1'>
+<title>Točnostni reli – v7.3 WebRTC (Stable QR)</title>
+<script src='https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js'></script>
+</head>
+<body>
+<h1>QR FIX VERSION</h1>
+<p>Ta verzija vsebuje stabilen QR generator prek CDN.</p>
+<button id='mk'>Ustvari QR</button>
+<div id='qr'></div>
+<script>
+const btn=document.getElementById('mk');
+btn.onclick=()=>{
+  const box=document.getElementById('qr');
+  box.innerHTML='';
+  new QRCode(box,{text:'TEST-QR',width:256,height:256});
+};
+</script>
+</body>
+</html>
